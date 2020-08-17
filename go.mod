@@ -1,4 +1,4 @@
-module github.com/ibrokethecloud/rancher-rbac-lister
+module github.com/ibrokethecloud/rancher-rbac-report
 
 go 1.14
 

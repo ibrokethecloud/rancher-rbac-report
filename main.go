@@ -3,12 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/ibrokethecloud/rancher-rbac-lister/pkg/lister"
 	"os"
+
+	"github.com/ibrokethecloud/rancher-rbac-report/pkg/report"
 )
 
 func main() {
-	root, err := lister.NewReportCommand(context.TODO())
+	root, err := report.NewReportCommand(context.TODO())
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)

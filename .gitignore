@@ -1,1 +1,2 @@
-./rancher-rbac-lister*
+./rancher-rbac-report*
+./kubectl-rancher-rbac-report*

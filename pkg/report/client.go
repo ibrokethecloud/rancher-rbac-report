@@ -1,4 +1,4 @@
-package lister
+package report
 
 import (
 	managementv3 "github.com/rancher/types/apis/management.cattle.io/v3"

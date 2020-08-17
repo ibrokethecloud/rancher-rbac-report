@@ -1,4 +1,4 @@
-package lister
+package report
 
 import (
 	"context"
@@ -25,7 +25,8 @@ type ReportCommandConfig struct {
 }
 
 type Report struct {
-	Clusters map[string]ClusterDetails
+	GlobalRoles []managementv3.GlobalRoleBinding
+	Clusters    map[string]ClusterDetails
 }
 
 type ClusterDetails struct {
@@ -66,6 +67,7 @@ func (rc ReportCommandConfig) GenerateReport() {
 			prtblist, err := rc.listProjectMembers(project.Name)
 			if err != nil {
 				logrus.Errorf("Error while fetching project members for %s in %s %v\n", project, cluster, err)
+				os.Exit(1)
 			}
 			projectDetails.ProjectName = project.Spec.DisplayName
 			projectDetails.ProjectRoles = prtblist
@@ -75,12 +77,20 @@ func (rc ReportCommandConfig) GenerateReport() {
 		clusterRolesList, err := rc.listClusterMembers(cluster)
 		if err != nil {
 			logrus.Errorf("Error fetching clusterroles for cluster %s: %v\n", cluster, err)
+			os.Exit(1)
 		}
 		clusterDetails.ClusterRoles = clusterRolesList
 		clusterDetails.Projects = projectRoleMap
 		clusterDetails.ClusterName = clusterName
 		clusterDetailsMap[cluster] = clusterDetails
 	}
+
+	grtb, err := rc.getGlobalRoleBindings()
+	if err != nil {
+		logrus.Errorf("Error fetching global role bindings %v\n", err)
+		os.Exit(1)
+	}
+	report.GlobalRoles = grtb
 	report.Clusters = clusterDetailsMap
 	rc.generateTable(report)
 }
@@ -151,6 +161,15 @@ func (rc ReportCommandConfig) getUserList() (userDetails map[string]string) {
 	return
 }
 
+func (rc ReportCommandConfig) getGlobalRoleBindings() (globalRoles []managementv3.GlobalRoleBinding, err error) {
+	grtb, err := rc.Client.GlobalRoleBindings("").List(metav1.ListOptions{})
+	if err != nil {
+		return
+	}
+	globalRoles = grtb.Items
+	return
+}
+
 func fetchUserDisplayName(userName string) (displayName string) {
 	if val, ok := userDetailsMap[userName]; ok {
 		displayName = val
@@ -163,6 +182,8 @@ func fetchUserDisplayName(userName string) (displayName string) {
 
 // generateTable will render the table for the cluster report
 func (rc ReportCommandConfig) generateTable(r Report) {
+
+	generateGlobalRolesTable(r)
 	if len(rc.Cluster) != 0 {
 		for _, cd := range r.Clusters {
 			if cd.ClusterName == rc.Cluster {
@@ -220,4 +241,13 @@ func (rc ReportCommandConfig) parseClusters(cd ClusterDetails) {
 	}
 	clusterRolesTable.Render()
 	projectRolesTable.Render()
+}
+
+func generateGlobalRolesTable(r Report) {
+	globalRolesTable := tablewriter.NewWriter(os.Stdout)
+	globalRolesTable.SetHeader([]string{"User", "Global Role"})
+	for _, grtb := range r.GlobalRoles {
+		globalRolesTable.Append([]string{fetchUserDisplayName(grtb.UserName), grtb.GlobalRoleName})
+	}
+	globalRolesTable.Render()
 }
